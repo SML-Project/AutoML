@@ -1,27 +1,27 @@
 class LSTMLearner 有3个主要的使用场合：
 
 learner = LSTMLearner(paramdict)                                 //  通过参数字典paramdict生成一个对象learner，并进行初始化
-learner.learn(model.paramters(), loss, DataLoader)        //  在对原问题的模型进行训练前，先对LSTM进行优化，
-                                                                                        //  需要输入原问题的模型参数、原问题的损失函数、数据加载器DataLoader
-learner.step(model.paramters())                                     //   训练好LSTM后，对原问题的参数进行优化，放在loss.backward()后
+learner.learn(model.paramters(), loss, DataLoader)               //  在对原问题的模型进行训练前，先对LSTM进行优化，
+                                                                 //  需要输入原问题的模型参数、原问题的损失函数、数据加载器DataLoader
+learner.step(model.paramters())                                  //  训练好LSTM后，对原问题的参数进行优化，放在loss.backward()后
 
 其中paramdict需要包含以下参数：
 
-paramdict = {"batch_size",                                              //  DataLoader将数据分割成mini-batch，每个mini-batch的大小
-                      "num_stack",                                             //  LSTM纵向堆叠的层数
-                      "preprocess",                                            //  是否对输入LSTM的梯度进行预处理，默认为True
-                      "p",                                                           //  对输入LSTM的梯度预处理的判据，默认为10 
-                      "output_scale",                                         //   对LSTM输出的梯度更新值进行缩放，默认为0.1
+paramdict = {"batch_size",                                       //  DataLoader将数据分割成mini-batch，每个mini-batch的大小
+             "num_stack",                                        //  LSTM纵向堆叠的层数
+             "preprocess",                                       //  是否对输入LSTM的梯度进行预处理，默认为True
+             "p",                                                //  对输入LSTM的梯度预处理的判据，默认为10 
+             "output_scale",                                     //  对LSTM输出的梯度更新值进行缩放，默认为0.1
 
-                      "USE_CUDA",                                            //  是否使用GPU，默认为True
-             	      "LSTM_TRAIN_ITERATION",                      //  训练LSTM参数的迭代次数，默认为100 
-                      "UNROLL_ITERATION",                             //  训练LSTM一次需要原问题提供多少轮梯度信息，默认为20
-                      "THETA_RESET_INTERVAL",                      //  为了避免LSTM对原问题参数过拟合，间隔多少次对参数进行重置，默认为10
-                      "LSTM_ADAM_LR",                                   //  使用ADAM算法对LSTM优化，学习率是多少，默认为0.001
-                      "LSTM_ADAM_BETAS",                             //  使用ADAM算法对LSTM优化，计算梯度平均的系数是多少，默认为(0.9, 0.999)	
-                      "LSTM_ADAM_EPS",                                 //  使用ADAM算法对LSTM优化，增强数值稳定性需要的附加项，默认为1e-8
-                      "LSTM_ADAM_WD",                                 //  使用ADAM算法对LSTM优化，weight_decay大小，默认为0
-                     }
+             "USE_CUDA",                                         //  是否使用GPU，默认为True
+             "LSTM_TRAIN_ITERATION",                             //  训练LSTM参数的迭代次数，默认为100 
+             "UNROLL_ITERATION",                                 //  训练LSTM一次需要原问题提供多少轮梯度信息，默认为20
+             "THETA_RESET_INTERVAL",                             //  为了避免LSTM对原问题参数过拟合，间隔多少次对参数进行重置，默认为10
+             "LSTM_ADAM_LR",                                     //  使用ADAM算法对LSTM优化，学习率是多少，默认为0.001
+             "LSTM_ADAM_BETAS",                                  //  使用ADAM算法对LSTM优化，计算梯度平均的系数是多少，默认为(0.9, 0.999)	
+             "LSTM_ADAM_EPS",                                    //  使用ADAM算法对LSTM优化，增强数值稳定性需要的附加项，默认为1e-8
+             "LSTM_ADAM_WD",                                     //  使用ADAM算法对LSTM优化，weight_decay大小，默认为0
+            }
 
 
 
