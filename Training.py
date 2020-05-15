@@ -11,6 +11,7 @@ import torch.optim as optim
 import set_param
 from LoadData import get_data_loader
 import Models
+from LSTMLearner import LSTMLearner
 
 parser = argparse.ArgumentParser(description='Parameters for learning to learn')
 
@@ -32,12 +33,14 @@ parser.add_argument('--LSTM_ADAM_WD', type=int, default=0, metavar='N',
                     help='weight_decay (default: 0)')
 parser.add_argument('--LR', type=float, default=0.001, metavar='N',
                     help='learning rate (default: 0.001)')
+parser.add_argument('--hidden_size', type=int, default=20, metavar='N',
+                    help='dim of LSTM hidden states (default: 20)')
 
 parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                     help='batch size (default: 32)')
 parser.add_argument('--num_epochs', type=int, default=20000, metavar='N',
                     help='# of epochs (default: 20000)')
-parser.add_argument('--num_stack', type=int, default=2, metavar='N',
+parser.add_argument('--num_stacks', type=int, default=2, metavar='N',
                     help='# of LSTM layers (default: 2)')
 parser.add_argument('--preprocess', action='store_true', default=True,
                     help='enables LSTM preprocess')
@@ -45,7 +48,7 @@ parser.add_argument('--p', type=int, default=10, metavar='N',
                     help='criterion for preprocess of gradient (default: 10)')
 parser.add_argument('--output_scale', type=float, default=0.1, metavar='N',
                     help='scale for updates of gradient (default: 0.1)')
-parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 
 args = parser.parse_args()
@@ -69,6 +72,7 @@ def train_mnist_cifar_base(net, dataset_name, criterion, optimizer, args=args):
             optimizer.step()
             train_loss += loss.item()
             if batch_id % args.log_interval == 0:
+                print(str(batch_id))
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_id * len(data), len(train_loader.dataset),
                            100. * batch_id / len(train_loader), loss.item()))
@@ -77,22 +81,28 @@ def train_mnist_cifar_base(net, dataset_name, criterion, optimizer, args=args):
     return t_loss
 
 def train_mnist_cifar_learner(net, dataset_name, criterion, args=args):
+    learner_a = LSTMLearner(args)
+    learner_b = LSTMLearner(args)
+    train_loader = get_data_loader(dataset_name=dataset_name)
+    learner_a.learn(net, criterion,train_loader)
+    learner_b.learn(net, criterion,train_loader)
+    learner_a.init_step(net.convlayer)
+    learner_a.init_step(net.fclayer)
     t_loss = []
     for epoch in range(args.num_epochs):
         train_loss = 0
-        train_loader = get_data_loader(dataset_name=dataset_name)
         for batch_id, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             net.train()
             output = net(data)
-            optimizer_conv = LSTMlearner(net.convlayer.parameters())
-            optimizer_fc = LSTMlearner(net.fclayer.parameters())
-            optimizer_conv.zero_grad()
-            optimizer_fc.zero_grad()
+            optimizer_conv = learner_a(net.convlayer.parameters())
+            optimizer_fc = learner_b(net.fclayer.parameters())
+            optimizer_conv.zero_grad(net.convlayer)
+            optimizer_fc.zero_grad(net.fclayer)
             loss = criterion(output, target)
             loss.backward()
-            optimizer_conv.step()
-            optimizer_fc.step()
+            optimizer_conv.step(net.convlayer)
+            optimizer_fc.step(net.fclayer)
             train_loss += loss.item()
             if batch_id % args.log_interval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
@@ -126,7 +136,7 @@ def get_data_size(dataset_name="Quadratic_Origin"):
     return input_units
 
 
-def train_opts_mnist_cifar(criterion, optimizer, args=args, net_type="ConvMNISTNet", dataset_name='MNIST'):
+def train_opts_mnist_cifar(net_type, dataset_name, criterion, optimizer, args=args):
     if net_type == "Qua":
         input_units = get_data_size()
         net = Models.Qua(input_units).to(device)
@@ -145,7 +155,7 @@ def train_opts_mnist_cifar(criterion, optimizer, args=args, net_type="ConvMNISTN
     opt_Adam = optim.Adam(net.parameters(), lr=args.LR, betas=(0.9, 0.99))
     opt_dict_set = {"opt_SGD": opt_SGD, "opt_Momentum": opt_Momentum, "opt_RMSprop": opt_RMSprop, "opt_Adam": opt_Adam}
 
-    if optimizer == "LSTMlearner":
+    if optimizer == "LSTMLearner":
         t_loss = train_mnist_cifar_learner(net, dataset_name, criterion, args=args)
 
     for key, value in opt_dict_set.items():
@@ -161,6 +171,35 @@ def train_opts_mnist_cifar(criterion, optimizer, args=args, net_type="ConvMNISTN
 
 if __name__ == '__main__':
     # Quadratic function
-    train_opts_mnist_cifar(criterion=nn.MSELoss(), optimizer="opt_SGD", net_type="Qua", dataset_name="Quadratic_Origin")
-    # MNIST
-    # train_opts_mnist_cifar(criterion = nn.CrossEntropyLoss(), optimizer = "opt_SGD")
+    train_opts_mnist_cifar(net_type="Qua", dataset_name="Quadratic_Origin", criterion=nn.MSELoss(), optimizer="opt_SGD")
+
+    #train_opts_mnist_cifar(net_type="ConvMNISTNet", dataset_name='MNIST', criterion = nn.CrossEntropyLoss(), optimizer = "LSTMLearner")
+
+'''
+train_opts_mnist_cifar()
+Choose the type for net:
+    net_type="Qua"
+    net_type="TwoLayerNet"
+    net_type="ThreeLayerNet"
+    net_type="ConvMNISTNet"
+    net_type="ConvCIFARNet"
+Choose the name for dataset:
+    dataset_name='MNIST'
+    dataset_name='CIFAR10'
+    dataset_name='CIFAR2'
+    dataset_name='CIFAR5'
+    dataset_name='Quadratic_Origin'
+    dataset_name='Quadratic_Uniform'
+    dataset_name='Quadratic_Gauss'
+Choose the type for criterion:
+    criterion=nn.MSELoss() 
+    criterion=nn.CrossEntropyLoss()
+    criterion=nn.NLLLoss() 
+    ...
+Choose the type for optimizer:
+   optimizer="LSTMLearner" 
+   optimizer="opt_SGD"
+   optimizer="opt_Momentum"
+   optimizer="opt_RMSprop"
+   optimizer="opt_Adam"
+'''
