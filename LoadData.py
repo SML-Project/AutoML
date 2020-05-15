@@ -1,4 +1,8 @@
 import torch
+from torchvision.datasets import mnist,CIFAR10
+from torchvision import transforms
+from torch.utils.data import DataLoader
+import torch.utils.data as Data
 import numpy as np
 
 def get_data_loader(dataset_name='MNIST',batch_size=32,train=True,transform=transforms.ToTensor()):
