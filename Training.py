@@ -12,7 +12,6 @@ import set_param
 from LoadData import get_data_loader
 import Models
 
-
 parser = argparse.ArgumentParser(description='Parameters for learning to learn')
 
 parser.add_argument('--USE_CUDA', action='store_true', default=True,
@@ -46,159 +45,122 @@ parser.add_argument('--p', type=int, default=10, metavar='N',
                     help='criterion for preprocess of gradient (default: 10)')
 parser.add_argument('--output_scale', type=float, default=0.1, metavar='N',
                     help='scale for updates of gradient (default: 0.1)')
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+                    help='how many batches to wait before logging training status')
 
 args = parser.parse_args()
 args.USE_CUDA = args.USE_CUDA and torch.cuda.is_available()
-
-def w(v):
-    if torch.cuda.is_available():
-        return v.cuda()
-    return v
-class QuadraticLoss:
-    def __init__(self, **kwargs):
-        self.W = w(Variable(torch.randn(10, 10)))
-        self.y = w(Variable(torch.randn(10).t()))
-
-    def get_loss(self, theta):
-        return torch.sum((self.W.matmul(theta) - self.y) ** 2)
-loss_func = QuadraticLoss()
-loss_func.W.requires_grad = True
-loss_func.y.requires_grad = True
-
-x = torch.randn(10).t()
-x.requires_grad = True
-
-opt_SGD = optim.SGD([x], lr=1e-3)
-opt_Momentum = optim.SGD([x], lr=args.LR, momentum=0.8)
-opt_RMSprop = optim.RMSprop([x], lr=args.LR, alpha=0.9)
-opt_Adam = optim.Adam([x], lr=args.LR, betas=(0.9,0.99))
-opt_dict = {"opt_SGD": opt_SGD,"opt_Momentum": opt_Momentum,"opt_RMSprop": opt_RMSprop,"opt_Adam": opt_Adam}
+device = torch.device("cuda:0" if args.USE_CUDA else "cpu")
 
 
-def train_quadratic(optimizer):
-    for step in range(args.num_epochs):
-        #pred = torch.sum((loss_func.W.matmul(x) - loss_func.y) ** 2)
-        pred = loss_func.get_loss(x)
-        optimizer.zero_grad()
-        pred.backward()
-        optimizer.step()
-        if step % 2000 == 0:
-            print('step{}: x = {}, f(x) = {}'.format(step, x, pred.item()))
-
-def train_opts_quadratic(**kwargs):
-    for key, value in kwargs.items():
-        optimizer = kwargs[key]
-        print(key)
-        train_quadratic(optimizer)
-
-'''
-def train_MNIST(net,optimizer):
-    #net = Models.ConvNet()
-    criterion = nn.CrossEntropyLoss()
+def train_mnist_cifar_base(net, dataset_name, criterion, optimizer, args=args):
+    t_loss = []
     for epoch in range(args.num_epochs):
-        train_loss = []
-        for batch_id, (data, target) in enumerate(get_data_loader()):
-            print(batch_id)
+        train_loss = 0
+        train_loader = get_data_loader(dataset_name=dataset_name)
+        for batch_id, (data, target) in enumerate(train_loader):
+            #print(batch_id, data.size(), target.size(), data.size()[1] * data.size()[2],len(train_loader.dataset), len(train_loader))
+            data, target = data.to(device), target.to(device)
             net.train()
+            optimizer.zero_grad()
             output = net(data)
             loss = criterion(output, target)
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            train_loss.append(loss)
-            if batch_id % 100 == 0:
-                net.eval()
-                val_loss = []
-                for (data, target) in get_data_loader(train=False):
-                    output = net(data)
-                    loss_val = criterion(output, target)
-                    val_loss.append(loss_val)
-                print(val_loss)
+            train_loss += loss.item()
+            if batch_id % args.log_interval == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_id * len(data), len(train_loader.dataset),
+                           100. * batch_id / len(train_loader), loss.item()))
+        train_loss /= len(train_loader)
+        t_loss.append(train_loss)
+    return t_loss
+
+def train_mnist_cifar_learner(net, dataset_name, criterion, args=args):
+    t_loss = []
+    for epoch in range(args.num_epochs):
+        train_loss = 0
+        train_loader = get_data_loader(dataset_name=dataset_name)
+        for batch_id, (data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            net.train()
+            output = net(data)
+            optimizer_conv = LSTMlearner(net.convlayer.parameters())
+            optimizer_fc = LSTMlearner(net.fclayer.parameters())
+            optimizer_conv.zero_grad()
+            optimizer_fc.zero_grad()
+            loss = criterion(output, target)
+            loss.backward()
+            optimizer_conv.step()
+            optimizer_fc.step()
+            train_loss += loss.item()
+            if batch_id % args.log_interval == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_id * len(data), len(train_loader.dataset),
+                           100. * batch_id / len(train_loader), loss.item()))
+        train_loss /= len(train_loader)
+        t_loss.append(train_loss)
+    return t_loss
+
+
+'''
+def test_MNIST_CIFAR_base(args = args, net, dataset_name, optimizer):
+    net.eval()
+    loss_test = 0
     test_loss = []
     with torch.no_grad():
-        for data, target in get_data_loader(train=False):
+        test_loader = get_data_loader(dataset_name = dataset_name, train=False)
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
             output = net(data)
-            loss_test = criterion(output, target)
-            test_loss.append(loss_test)
-    print(val_loss)
-
-def train_opts_MNIST(nettype="ConvNet",**kwargs):
-    for key, value in kwargs.items():
-        optimizer = kwargs[key]
-        print(key)
-        if nettype == "TwoLayerNet":
-            net = Models.TwoLayerNet()
-        elif nettype == "ThreeLayerNet":
-            net = Models.ThreeLayerNet()
-        elif nettype == "ConvNet":
-            net = Models.ConvNet()
-
-        train_MNIST(net,optimizer)
+            loss_test += criterion(output, target, size_average = False).item()
+            #test_loss.append(loss_test.item())
+    loss_test /= len(test_loader.dataset)
+    return loss_test
 '''
 
 
-def train_MNIST_CIFAR(net, dataset_name, optimizer):
-    #net = Models.ConvNet()
-    criterion = nn.CrossEntropyLoss()
-    for epoch in range(args.num_epochs):
-        train_loss = []
-        for batch_id, (data, target) in enumerate(get_data_loader(dataset_name = dataset_name)):
-            #print(batch_id)
-            net.train()
-            output = net(data)
-            loss = criterion(output, target)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            train_loss.append(loss)
-            if batch_id % 100 == 0:
-                net.eval()
-                val_loss = []
-                for (data, target) in get_data_loader(dataset_name = dataset_name, train=False):
-                    output = net(data)
-                    loss_val = criterion(output, target)
-                    val_loss.append(loss_val.item())
-                #print(val_loss)
-    test_loss = []
-    with torch.no_grad():
-        for data, target in get_data_loader(dataset_name = dataset_name, train=False):
-            output = net(data)
-            loss_test = criterion(output, target)
-            test_loss.append(loss_test.item())
-    return val_loss, test_loss
+def get_data_size(dataset_name="Quadratic_Origin"):
+    for batch_id, (data, target) in enumerate(get_data_loader(dataset_name)):
+        input_units = data.size()[1] * data.size()[2]
+    return input_units
 
-def train_opts_MNIST_CIFAR(net_type="ConvNet", dataset_name = 'MNIST'):
 
-    if net_type == "TwoLayerNet":
-        net = Models.TwoLayerNet()
+def train_opts_mnist_cifar(criterion, optimizer, args=args, net_type="ConvMNISTNet", dataset_name='MNIST'):
+    if net_type == "Qua":
+        input_units = get_data_size()
+        net = Models.Qua(input_units).to(device)
+    elif net_type == "TwoLayerNet":
+        net = Models.TwoLayerNet().to(device)
     elif net_type == "ThreeLayerNet":
-        net = Models.ThreeLayerNet()
-    elif net_type == "ConvNet":
-        net = Models.ConvNet()
+        net = Models.ThreeLayerNet().to(device)
+    elif net_type == "ConvMNISTNet":
+        net = Models.ConvMNISTNet().to(device)
     elif net_type == "ConvCIFARNet":
-        net = Models.ConvCIFARNet()
-    elif net_type == "TwoLayerCIFARNet":
-        net = Models.TwoLayerCIFARNet()
-    elif net_type == "ThreeLayerCIFARNet":
-        net = Models.ThreeLayerCIFARNet()
+        net = Models.ConvCIFARNet().to(device)
 
-    opt_SGD = optim.SGD(net.parameters(), lr=1e-3)
+    opt_SGD = optim.SGD(net.parameters(), lr=args.LR)
     opt_Momentum = optim.SGD(net.parameters(), lr=args.LR, momentum=0.8)
     opt_RMSprop = optim.RMSprop(net.parameters(), lr=args.LR, alpha=0.9)
     opt_Adam = optim.Adam(net.parameters(), lr=args.LR, betas=(0.9, 0.99))
     opt_dict_set = {"opt_SGD": opt_SGD, "opt_Momentum": opt_Momentum, "opt_RMSprop": opt_RMSprop, "opt_Adam": opt_Adam}
 
+    if optimizer == "LSTMlearner":
+        t_loss = train_mnist_cifar_learner(net, dataset_name, criterion, args=args)
+
     for key, value in opt_dict_set.items():
-        optimizer = opt_dict_set[key]
-        print(key)
-        val_losslist, test_losslist = train_MNIST_CIFAR(net, dataset_name, optimizer)
-        filename = net_type + dataset_name + key + '.txt'
-        with open(filename, 'a') as f_object:
-            f_object.write("val_losslist" + '\n' + str(val_losslist))
-            f_object.write("test_losslist" + '\n' + str(test_losslist))
+        if optimizer == key:
+            print(key)
+            optimizer = opt_dict_set[key]
+            t_loss = train_mnist_cifar_base(net, dataset_name, criterion, optimizer, args=args)
+            filename = net_type + dataset_name + criterion + key +'.txt'
+            with open(filename, 'a') as f_object:
+                for epoch, loss in enumerate(t_loss):
+                    f_object.write("Epoch: " + str(epoch) + ' ' + "Loss: " + str(loss))
 
 
 if __name__ == '__main__':
-    #train_opts_quadratic(**opt_dict)
-    train_opts_MNIST_CIFAR()
-
+    # Quadratic function
+    train_opts_mnist_cifar(criterion=nn.MSELoss(), optimizer="opt_SGD", net_type="Qua", dataset_name="Quadratic_Origin")
+    # MNIST
+    # train_opts_mnist_cifar(criterion = nn.CrossEntropyLoss(), optimizer = "opt_SGD")
