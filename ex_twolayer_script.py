@@ -1,5 +1,5 @@
-import Models
-from NewTrain import train_mnist_cifar_learner,args,get_net_params,train_mnist_cifar_base
+import Models_tensor
+from NewTrain import args,get_net_params
 import torch.nn as nn
 from LSTMLearnerTensor import LSTMLearner
 from LoadData import get_data_loader
@@ -10,7 +10,7 @@ dataset_name="MNIST"
 criterion_name="CrossEntropy"
 optimizer_name="LSTMLearner"
 
-net=Models.TwoLayer_Tensor(input_units=784,hidden_units=20)
+net=Models_tensor.TwoLayer_Tensor(input_units=784,hidden_units=20)
 params=get_net_params(net)
 
 
