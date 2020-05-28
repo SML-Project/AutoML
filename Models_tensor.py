@@ -83,8 +83,9 @@ class TwoLayer_Tensor():
         return out
 ########################################################################################
 class ThreeLayer_Tensor():
-    def __init__(self,input_units,hidden_units,activation='sigmoid'):
-        self.activation = activation
+    def __init__(self,input_units,hidden_units,activation1='relu',activation2='sigmoid'):
+        self.activation1 = activation1
+        self.activation2=activation2
         #self.input_units = input_units
         self.W_1 = self.xavier_init2(size=[input_units,hidden_units]) #初始化size为input_units*hiddenunits的W网络参数
         #print(self.W_1)
@@ -142,12 +143,20 @@ class ThreeLayer_Tensor():
         #print(X.size())
         #print(X.size())
         #print("W_1size",self.W_1.size())
-        if self.activation=="sigmoid":
-            X=torch.sigmoid(torch.matmul(X,self.W_1)+self.b_1)
-            X = torch.sigmoid(torch.matmul(X, self.W_2) + self.b_2)
+        if self.activation1=="sigmoid":
+            if(self.activation2=='sigmoid'):
+                X = torch.sigmoid(torch.matmul(X, self.W_1) + self.b_1)
+                X = torch.sigmoid(torch.matmul(X, self.W_2) + self.b_2)
+            else:
+                X = torch.sigmoid(torch.matmul(X, self.W_1) + self.b_1)
+                X = torch.relu(torch.matmul(X, self.W_2) + self.b_2)
         else:
-            X = torch.relu(torch.matmul(X, self.W_1) + self.b_1)
-            X = torch.relu(torch.matmul(X, self.W_2) + self.b_2)
+            if (self.activation2 == 'sigmoid'):
+                X = torch.relu(torch.matmul(X, self.W_1) + self.b_1)
+                X = torch.sigmoid(torch.matmul(X, self.W_2) + self.b_2)
+            else:
+                X = torch.relu(torch.matmul(X, self.W_1) + self.b_1)
+                X = torch.relu(torch.matmul(X, self.W_2) + self.b_2)
         X=torch.matmul(X,self.W_out)+self.b_out
         return X
 
