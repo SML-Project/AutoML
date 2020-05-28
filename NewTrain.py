@@ -80,28 +80,29 @@ def train_mnist_cifar_base(net, dataset_name, criterion, optimizer, args=args):
         t_loss.append(train_loss)
     return t_loss
 
-def train_mnist_cifar_learner(net, params, dataset_name, criterion, args=args):
+def train_mnist_cifar_learner(net, dataset_name, criterion, args=args):
     learner_a = LSTMLearner(args)
     #learner_b = LSTMLearner(args)
     train_loader = get_data_loader(dataset_name=dataset_name)
-    learner_a.learn(params,net, criterion,train_loader)
+    #learner_a.learn(params,net, criterion,train_loader)
     #learner_b.learn(net, criterion,train_loader)
-    learner_a.init_step(net)
+    learner_a.init_step(net.parameters())
     #learner_a.init_step(net.fclayer)
     t_loss = []
-    for epoch in range(10):
+    for epoch in range(5):
         train_loss = 0
         for batch_id, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             #net.train()
-            output = net.forward(data)
-            optimizer = learner_a(params)
+            output = net(data)
+            #optimizer = learner_a(params)
             #optimizer_fc = learner_b(net.fclayer.parameters())
-            optimizer.zero_grad(params)
+            #optimizer.zero_grad(params)
+            learner_a.zero_grad(net.parameters())
             #optimizer_fc.zero_grad(net.fclayer)
             loss = criterion(output, target)
-            loss.backward()
-            optimizer.step()
+            loss.backward(retain_graph=True)
+            learner_a.step(net)
             #optimizer_fc.step(net.fclayer)
             train_loss += loss.item()
             if batch_id % args.log_interval == 0:
@@ -111,11 +112,6 @@ def train_mnist_cifar_learner(net, params, dataset_name, criterion, args=args):
         train_loss /= len(train_loader)
         t_loss.append(train_loss)
     return t_loss
-
-def get_data_size(dataset_name="Quadratic_Origin"):
-    for batch_id, (data, target) in enumerate(get_data_loader(dataset_name)):
-        input_units = data.size()[1] * data.size()[2]
-    return input_units
 
 
 def train_opts_mnist_cifar(net_type, dataset_name, criterion, optimizer, args=args,params=None):
