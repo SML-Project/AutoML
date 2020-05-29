@@ -22,7 +22,6 @@ criterion=nn.CrossEntropyLoss()
 
 #loss_his=train_mnist_cifar_base(net, "MNIST", nn.CrossEntropyLoss(), optimizer, args=args)
 loss_his=train_mnist_cifar_learner(net, dataset_name, criterion, args=args)
-path = "modelparam_2_sigmoid.pth"
-torch.save(net.param_dict,path)
+torch.save(net.state_dict(),"fc2_model_sigmoid.pkl")
 filename = net_type + dataset_name + criterion_name + optimizer_name + '.txt'
 torch.save(loss_his,filename)
