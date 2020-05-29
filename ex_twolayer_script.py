@@ -21,8 +21,8 @@ criterion=nn.CrossEntropyLoss()
 #loss_his=train_mnist_cifar_learner(net, params, dataset_name, criterion, args=args)
 learner_a = LSTMLearner(args)
 train_loader = get_data_loader(dataset_name=dataset_name)
-learner_a.learn(params,net,criterion,train_loader)
-
+#learner_a.learn(params,net,criterion,train_loader)
+learner_a.continue_learn(params,net,criterion,train_loader)
 #print(len(loss_his))
 '''
 path = "model_parameters/modelparam_1.pth"
