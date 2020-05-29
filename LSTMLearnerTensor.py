@@ -336,7 +336,90 @@ class LSTMLearner(object):
         self.plot_lstm_loss()
         self.lstm_model = copy.deepcopy(best_lstm_model)
         torch.save(self.lstm_model.state_dict(), "./lstm_model.pkl")
+        
+        
+    def continue_learn(self, model_theta_list, model, criterion, data_loader):
+        #self.lstm_reset()
+        self.lstm_model.load_state_dict(torch.load("./lstm_model.pkl"))
+        theta_list = copy.deepcopy(model_theta_list)
+        if self.USE_CUDA:
+            for i in range(len(theta_list)):
+                theta_list[i] = theta_list[i].cuda()
+        self.theta_size(theta_list)
+        best_lstm_train_loss = 99999.0
+        best_lstm_model = copy.deepcopy(self.lstm_model)
 
+        for k in range(self.LSTM_TRAIN_ITERATION):
+            self.LSTM_TRAIN_LOSS = 0
+            self.MODEL_LOSS_HIST = []
+            if k % self.THETA_RESET_INTERVAL == 0:
+                theta_list = self.theta_reset(theta_list)
+            update_loaders = []
+            state_loader = self.state_cat()
+            self.zero_grad(self.lstm_model.parameters())
+            for epoch in range(self.UNROLL_ITERATION):
+                print(epoch)
+
+                self.zero_grad(theta_list)
+
+                MODEL_LOSS = 0
+                for inputs, targets in data_loader:
+                    if self.USE_CUDA:
+                        inputs = inputs.cuda()
+                        targets = targets.cuda()
+                    model.load_params(theta_list)
+                    outputs = model.forward(inputs)
+                    loss = criterion(outputs, targets)
+                    MODEL_LOSS += loss
+                self.LSTM_TRAIN_LOSS += MODEL_LOSS
+                self.MODEL_LOSS_HIST.append(MODEL_LOSS.item())
+
+                MODEL_LOSS.backward(retain_graph=True)
+
+                grad_loader = self.grad_cat(theta_list)
+
+                self.batch_start_index = 0
+                self.prev_batch_start_index = 0
+                self.batch_end_flag = False
+                update_loaders.append(torch.Tensor([]))
+                if self.USE_CUDA:
+                    update_loaders[epoch] = update_loaders[epoch].cuda()
+                update_loaders[epoch].requires_grad_(True)
+                while True:
+                    grad_batch, state_batch = self.get_batch(grad_loader, state_loader)
+                    update_batch, cur_state_batch = self.lstm_model(grad_batch, state_batch)
+                    update_loaders[epoch], state_loader = self.update_cat(update_batch, cur_state_batch,
+                                                                          update_loaders[epoch], state_loader)
+                    if self.batch_end_flag == True:
+                        break
+
+                theta_list = self.theta_update(update_loaders[epoch], theta_list)
+                # print("new theta list",theta_list[0].shape,theta_list[1].shape,theta_list[2].shape,theta_list[3].shape)
+                state_loader = [state_loader[0].detach(), state_loader[1].detach()]
+
+            # 代码彻底跑通后再画这个图
+            # self.plot_model_loss(k)
+            # 不知道是否需要这个大LOSS.backward()，还得测试
+            # self.LSTM_TRAIN_LOSS.backward(retain_graph=True)
+            self.LSTM_ADAM.step()
+            # 观察LSTM里的参数是否随着k的增加一直迭代，也可以把p.grad打印出来
+            for i, p in enumerate(self.lstm_model.lstm.parameters()):
+                if i == 0:
+                    print("lstm param")
+                    print(p)
+            self.LSTM_TRAIN_LOSS_HIST.append(self.LSTM_TRAIN_LOSS.item())
+            print("lstm train step : %i / %i" % (k + 1, self.LSTM_TRAIN_ITERATION))
+            print("lstm train loss : %.6f" % self.LSTM_TRAIN_LOSS.item())
+            print("-" * 30 + "\n")
+            if self.LSTM_TRAIN_LOSS.item() < best_lstm_train_loss:
+                best_lstm_train_loss = self.LSTM_TRAIN_LOSS.item()
+                best_lstm_model = copy.deepcopy(self.lstm_model)
+
+        self.plot_lstm_loss()
+        self.lstm_model = copy.deepcopy(best_lstm_model)
+        torch.save(self.lstm_model.state_dict(), "./lstm_model.pkl")
+
+   
     def init_step(self, model_params):
         self.lstm_model.load_state_dict(torch.load("./lstm_model.pkl"))
         self.theta_size(model_params)
