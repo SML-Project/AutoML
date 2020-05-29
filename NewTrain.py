@@ -111,6 +111,7 @@ def train_mnist_cifar_learner(net, dataset_name, criterion, args=args):
                            100. * batch_id / len(train_loader), loss.item()))
         train_loss /= len(train_loader)
         t_loss.append(train_loss)
+        torch.save(net.state_dict(),"fc2_model_sigmoid.pkl")
     return t_loss
 
 
