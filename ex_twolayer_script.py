@@ -21,12 +21,7 @@ criterion=nn.CrossEntropyLoss()
 #loss_his=train_mnist_cifar_learner(net, params, dataset_name, criterion, args=args)
 learner_a = LSTMLearner(args)
 train_loader = get_data_loader(dataset_name=dataset_name)
-#learner_a.learn(params,net,criterion,train_loader)
-learner_a.continue_learn(params,net,criterion,train_loader)
+#learner_a.learn(params,net,criterion,train_loader)#从头训练
+learner_a.continue_learn(params,net,criterion,train_loader)#读入之前训练好的模型参数继续训练
 #print(len(loss_his))
-'''
-path = "model_parameters/modelparam_1.pth"
-torch.save(net.param_dict,path)
-filename = net_type + dataset_name + criterion_name + optimizer_name + '.txt'
-torch.save(loss_his,filename)
-'''
+
