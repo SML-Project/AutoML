@@ -22,6 +22,6 @@ criterion=nn.CrossEntropyLoss()
 learner_a = LSTMLearner(args)
 train_loader = get_data_loader(dataset_name=dataset_name)
 #learner_a.learn(params,net,criterion,train_loader)#从头训练
-learner_a.continue_learn(params,net,criterion,train_loader)#读入之前训练好的模型参数继续训练
+learner_a.continue_learn(params,net,criterion,train_loader,1)#读入之前训练好的模型参数继续训练
 #print(len(loss_his))
 
