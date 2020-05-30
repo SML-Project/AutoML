@@ -338,7 +338,7 @@ class LSTMLearner(object):
         torch.save(self.lstm_model.state_dict(), "./lstm_model.pkl")
         
         
-    def continue_learn(self, model_theta_list, model, criterion, data_loader):
+    def continue_learn(self, model_theta_list, model, criterion, data_loader,iter):
         #self.lstm_reset()
         self.lstm_model.load_state_dict(torch.load("./lstm_model.pkl"))
         theta_list = copy.deepcopy(model_theta_list)
@@ -418,6 +418,8 @@ class LSTMLearner(object):
         self.plot_lstm_loss()
         self.lstm_model = copy.deepcopy(best_lstm_model)
         torch.save(self.lstm_model.state_dict(), "./lstm_model.pkl")
+        filename = 'lstm_train_loss_continue' +str(iter)+'.txt'
+        torch.save(self.LSTM_TRAIN_LOSS_HIST,filename)
 
    
     def init_step(self, model_params):
