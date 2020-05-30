@@ -9,7 +9,7 @@ import torch.optim as optim
 import numpy as np
 from LoadData import get_data_loader
 import Models
-from LSTMLearner_tensor import LSTMLearner
+from LSTMLearnerTensor import LSTMLearner
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='Parameters for learning to learn')
