@@ -92,6 +92,8 @@ def train_mnist_cifar_learner(net, dataset_name, criterion, args=args):
     for epoch in range(5):
         train_loss = 0
         for batch_id, (data, target) in enumerate(train_loader):
+            if(batch_id%5==0):
+                print(batch_id)
             data, target = data.to(device), target.to(device)
             #net.train()
             output = net(data)
