@@ -40,7 +40,8 @@ def test_base_optimizer(net, dataset_name, criterion, optimizer, args=args):
         t_loss.append(train_loss)
         MODEL_LOSS.backward()
         optimizer.step()
-        print("loss:", train_loss)
+        if(epoch%20==0):
+            print("loss:", train_loss)
 
 
     return t_loss
@@ -107,8 +108,8 @@ def test_learner(net,params,dataset_name, criterion, args=args):
         state_loader = [state_loader[0].detach(), state_loader[1].detach()]
 
         # print("params",params)
-
-        print("loss:", MODEL_LOSS.item() / len(data_loader))
+        if(epoch%10==0):
+            print("loss:", MODEL_LOSS.item() / len(data_loader))
     t_loss=learner_a.MODEL_LOSS_HIST
     return t_loss
 
