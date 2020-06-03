@@ -120,6 +120,7 @@ def test_script(net_type, dataset_name, criterion, optimizer, args=args):
         net = Models_tensor.Qua(input_units).to(device)
     '''
     filename=net_type+dataset_name+optimizer+".txt"
+    modelname=net_type+dataset_name+optimizer+".pth"
     net = Models_tensor.TwoLayer_Tensor(input_units=784, hidden_units=20)
     params = get_net_params(net)
     if net_type == "TwoLayerNet":
@@ -143,6 +144,7 @@ def test_script(net_type, dataset_name, criterion, optimizer, args=args):
     if optimizer == "LSTMLearner":
         t_loss=test_learner(net, params, dataset_name, criterion, args=args)
         torch.save(t_loss,filename)
+        torch.save(net.param_dict, modelname)
         return t_loss
 
     for key, value in opt_dict_set.items():
@@ -151,6 +153,7 @@ def test_script(net_type, dataset_name, criterion, optimizer, args=args):
             optimizer = opt_dict_set[key]
             t_loss=test_base_optimizer(net, dataset_name, criterion, optimizer, args=args)
             torch.save(t_loss,filename)
+            torch.save(net.param_dict, modelname)
             return t_loss
 
 def plot_compare_loss(learner_loss,sgd_loss,momentum_loss,rms_loss,adam_loss):
