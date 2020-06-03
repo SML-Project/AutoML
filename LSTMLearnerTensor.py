@@ -257,7 +257,7 @@ class LSTMLearner(object):
     learn()这个函数可能需要修改，将被优化的参数们写成一个包含许多tensor的list，存为model_theta_list，作为learn()的输入
     同时，model不再是nn.Module的子类，而是一个model_theta_list的函数，outputs = model(model_theta_list, inputs)
     '''
-    def learn(self, model_theta_list, model, criterion, data_loader):
+    def learn(self, model_theta_list, model, criterion, data_loader,layer):
         self.lstm_reset()
         theta_list = copy.deepcopy(model_theta_list)
         if self.USE_CUDA:
@@ -336,6 +336,8 @@ class LSTMLearner(object):
         self.plot_lstm_loss()
         self.lstm_model = copy.deepcopy(best_lstm_model)
         torch.save(self.lstm_model.state_dict(), "./lstm_model.pkl")
+        filename = 'lstm_train_loss' + layer + '.txt'
+        torch.save(self.LSTM_TRAIN_LOSS_HIST, filename)
         
         
     def continue_learn(self, model_theta_list, model, criterion, data_loader,iter):
