@@ -4,6 +4,9 @@ import torch.nn as nn
 from LSTMLearnerTensor import LSTMLearner
 from LoadData import get_data_loader
 import torch.optim as optim
+import os
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
 
 net_type="ThreeLayer_Tensor"
 dataset_name="MNIST"
