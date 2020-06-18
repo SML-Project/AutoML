@@ -13,8 +13,8 @@ criterion_name="CrossEntropy"
 criterion = nn.CrossEntropyLoss()
 Losses={}
 for optimizer_name in optimizers:
-    loss_history=test_script(net_type, dataset_name, criterion, optimizer=optimizer_name, args=args)
+    loss_history=test_script(net_type, dataset_name, criterion, optimizer=optimizer_name, args=args,activation="relu")
     Losses[optimizer_name]=loss_history
 print(Losses)
-plot_compare_loss(Losses["LSTMLearner"],Losses["opt_SGD"],Losses["opt_Momentum"],Losses["opt_RMSprop"],Losses["opt_Adam"])
+plot_compare_loss(Losses["LSTMLearner"],Losses["opt_SGD"],Losses["opt_Momentum"],Losses["opt_RMSprop"],Losses["opt_Adam"],net_type="TwoLayer NN",activation="Ranh")
 

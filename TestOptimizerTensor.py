@@ -40,9 +40,8 @@ def test_base_optimizer(net, dataset_name, criterion, optimizer, args=args):
         t_loss.append(train_loss)
         MODEL_LOSS.backward()
         optimizer.step()
-        if(epoch%20==0):
+        if (epoch % 20 == 0):
             print("loss:", train_loss)
-
 
     return t_loss
 
@@ -79,7 +78,6 @@ def test_learner(net,params,dataset_name, criterion, args=args):
             net.load_params(params)
             outputs = net.forward(inputs)
             loss = criterion(outputs, targets)
-
             MODEL_LOSS += loss
         # learner_a.LSTM_TRAIN_LOSS += MODEL_LOSS
         learner_a.MODEL_LOSS_HIST.append(MODEL_LOSS.item() / len(data_loader))
@@ -113,7 +111,7 @@ def test_learner(net,params,dataset_name, criterion, args=args):
     t_loss=learner_a.MODEL_LOSS_HIST
     return t_loss
 
-def test_script(net_type, dataset_name, criterion, optimizer, args=args):
+def test_script(net_type, dataset_name, criterion, optimizer, args=args, activation="sigmoid"):
     '''
     if net_type == "Qua":
         input_units = get_data_size()
@@ -121,20 +119,9 @@ def test_script(net_type, dataset_name, criterion, optimizer, args=args):
     '''
     filename=net_type+dataset_name+optimizer+".txt"
     modelname=net_type+dataset_name+optimizer+".pth"
-    net = Models_tensor.TwoLayer_Tensor(input_units=784, hidden_units=20)
+    net = Models_tensor.TwoLayer_Tensor(input_units=784, hidden_units=20,activation=activation)
     params = get_net_params(net)
-    if net_type == "TwoLayerNet":
-        net = Models_tensor.TwoLayer_Tensor(input_units=784, hidden_units=20)
-        params = get_net_params(net)
-    elif net_type == "ThreeLayerNet":
-        net = Models_tensor.ThreeLayer_Tensor(input_units=784, hidden_units=20,activation1="sigmoid")
-        params = get_net_params(net)
-    '''
-    elif net_type == "ConvMNISTNet":
-        net = Models.ConvMNISTNet().to(device)
-    elif net_type == "ConvCIFARNet":
-        net = Models.ConvCIFARNet().to(device)
-    '''
+
     opt_SGD = optim.SGD(params, lr=args.LR)
     opt_Momentum = optim.SGD(params, lr=args.LR, momentum=0.8)
     opt_RMSprop = optim.RMSprop(params, lr=args.LR, alpha=0.9)
@@ -156,7 +143,7 @@ def test_script(net_type, dataset_name, criterion, optimizer, args=args):
             torch.save(net.param_dict, modelname)
             return t_loss
 
-def plot_compare_loss(learner_loss,sgd_loss,momentum_loss,rms_loss,adam_loss):
+def plot_compare_loss(learner_loss,sgd_loss,momentum_loss,rms_loss,adam_loss,net_type,activation):
     step = np.arange(len(learner_loss))
     p1, = plt.plot(step, learner_loss, label='LSTMLearner')
     p2, = plt.plot(step, sgd_loss, label='SGD')
@@ -166,7 +153,7 @@ def plot_compare_loss(learner_loss,sgd_loss,momentum_loss,rms_loss,adam_loss):
     plt.legend(handles=[p1, p2, p3, p4,p5])
     plt.xlabel("Steps")
     plt.ylabel("Loss")
-    plt.title("Compare Optimizer Losses")
-    plt.savefig("Compare Optimizer Losses.png", format="png")
+    plt.title("Compare Optimizer Losses on "+net_type+" with Activation "+activation)
+    plt.savefig("Compare Optimizer Losses"+net_type+activation+".png", format="png")
     plt.cla()
     plt.clf()
